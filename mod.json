@@ -1,7 +1,7 @@
 {
-  "id": "com.example.my_mod",
-  "name": "My Mod",
+  "id": "com.melonspeedruns.manualjumps",
+  "name": "Manual Jumps",
   "version": "1.0.0",
-  "author": "You",
-  "description": "An example Dusklight mod"
+  "author": "MelonSpeedruns",
+  "description": "A simple mod where holding Forward and pressing A while L-Targeting will have Link jump. You can also do a Jump Slash out of the jump!"
 }

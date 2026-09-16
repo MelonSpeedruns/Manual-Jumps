@@ -1,38 +1,54 @@
-#include "mods/svc/hook.hpp"
+#include "d/actor/d_a_alink.h"
 #include "mods/service.hpp"
 #include "mods/svc/hook.h"
-#include "mods/svc/log.h"
-
-// Game includes
-#include "d/d_item_data.h"
-#include "f_op/f_op_actor_mng.h"
+#include "mods/svc/hook.hpp"
 
 DEFINE_MOD();
-
-IMPORT_SERVICE(LogService, svc_log);
 IMPORT_SERVICE(HookService, svc_hook);
 
-// Example game hook: turn heart drops into green rupees.
-DEFINE_HOOK(fopAcM_createItem, CreateItem);
+DEFINE_HOOK(&daAlink_c::procFrontRollInit, LinkFrontRollAction);
+DEFINE_HOOK(&daAlink_c::procCutJumpInit, LinkCutJumpAction);
 
-static HookAction on_create_item_pre(ModContext*, void* args, void*, void*) {
-    int& itemNo = mods::arg_ref<int>(args, 1);
-    if (itemNo == dItemNo_HEART_e) {
-        itemNo = dItemNo_GREEN_RUPEE_e;
+extern "C" {
+
+HookAction link_front_roll_pre(ModContext* ctx, void* args, void* retval, void*) {
+    daAlink_c* link = daAlink_getAlinkActorClass();
+    if (link && link->checkAttentionLock()) {
+        int cutDir = link->getCutDirection();
+        if (cutDir == link->DIR_FORWARD) {
+            link->procAutoJumpInit(1);
+
+            if (retval != nullptr) {
+                *static_cast<int*>(retval) = 1;
+            }
+
+            return HOOK_SKIP_ORIGINAL;
+        }
     }
     return HOOK_CONTINUE;
 }
 
-extern "C" {
-MOD_EXPORT ModResult mod_initialize(ModError*) {
-    // Installs a pre hook on fopAcM_createItem.
-    ModResult result = mods::hook::add_pre<CreateItem>(on_create_item_pre);
-    if (result != MOD_OK) {
-        svc_log->error(mod_ctx, "failed to install on_create_item_pre");
-        return result;
-    }
+HookAction link_cut_jump_pre(ModContext* ctx, void* args, void* retval, void*) {
+    daAlink_c* link = daAlink_getAlinkActorClass();
+    BOOL& isAir = mods::arg_ref<BOOL>(args, 1);
+    if (link && !isAir && link->checkAttentionLock()) {
+        int cutDir = link->getCutDirection();
+        if (cutDir == link->DIR_FORWARD) {
+            link->procAutoJumpInit(1);
 
-    svc_log->info(mod_ctx, "my_mod initialized");
+            if (retval != nullptr) {
+                *static_cast<int*>(retval) = 1;
+            }
+
+            return HOOK_SKIP_ORIGINAL;
+        }
+    }
+    return HOOK_CONTINUE;
+}
+
+MOD_EXPORT ModResult mod_initialize(ModError*) {
+    mods::hook::add_pre<LinkFrontRollAction>(link_front_roll_pre);
+    mods::hook::add_pre<LinkCutJumpAction>(link_cut_jump_pre);
     return MOD_OK;
 }
 
